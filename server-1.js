@@ -93,12 +93,42 @@ server.route("post", "/api/login", (req, res) => {
     });
   }
 });
-server.route("delete", "/api/logout", (req, res) => {});
+server.route("delete", "/api/logout", (req, res) => {
+  // remove the session object from the SESSIONS array
+  const sessionIndex = SESSIONS.findIndex(
+    (session) => session.userId == req.userId
+  );
+  if (sessionIndex > -1) {
+    SESSIONS.slice(sessionIndex, 1);
+  }
+  // remove the cookie in the browser
+  res.setHeader(
+    "Set-Cookie",
+    `token=deleted; Path=/; Expires=Tue, 03 Jan 2024 19:45:46 GMT`
+  );
+  res.status(200).json({ message: "Logged out successful" });
+});
 server.route("get", "/api/user", (req, res) => {
   const user = USERS.find((user) => user.id === req.userId);
   res.json({ username: user.username, name: user.name });
 });
-server.route("put", "/api/user", (req, res) => {});
+server.route("put", "/api/user", (req, res) => {
+  const username = req.body.username;
+  const name = req.body.name;
+  const password = req.body.password;
+  // grab the user object that is currently logged in
+  const user = USERS.find((user) => user.id === req.userId);
+  user.username = username;
+  user.name = name;
+  if (password) {
+    user.password = password;
+  }
+  res.status(200).json({
+    username: user.username,
+    name: user.name,
+    password_status: password ? "updated" : "Unchanged",
+  });
+});
 server.route("get", "/api/posts", (req, res) => {
   const posts = POSTS.map((post) => {
     const user = USERS.find((user) => user.id === post.userId);
@@ -107,7 +137,18 @@ server.route("get", "/api/posts", (req, res) => {
   });
   res.status(200).json(posts);
 });
-server.route("post", "/api/posts", (req, res) => {});
+server.route("post", "/api/posts", (req, res) => {
+  const title = req.body.title;
+  const body = req.body.body;
+  const post = {
+    id: POSTS.length + 1,
+    title: title,
+    body: body,
+    userId: req.userId,
+  };
+  POSTS.unshift(post);
+  res.status(201).json(post);
+});
 server.lissten(PORT, () => {
   console.log("Server has started on port", PORT);
 });
